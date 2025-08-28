@@ -16,6 +16,8 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 import co.com.powerup.api.dtos.response.ErrorResponse;
+import co.com.powerup.api.exceptions.ForbiddenException;
+import co.com.powerup.api.exceptions.UnauthorizedException;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -41,25 +43,34 @@ public class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
 
     private Mono<ServerResponse> renderErrorResponse(ServerRequest request) {
         Throwable error = getError(request);
-        log.error("❌ Ocurrió un error, en solicitud: {}",request.toString());
+        log.error("❌ Ocurrió un error en la solicitud: {}", request.toString());
 
-        HttpStatus status;
+        return Mono.just(error)
+                .map(this::resolveHttpStatus)
+                .flatMap(status -> {
+                    ErrorResponse errorResponse = ErrorResponse.builder()
+                            .status(status.value())
+                            .message(error.getMessage())
+                            .path(request.toString())
+                            .timestamp(LocalDateTime.now())
+                            .build();
+
+                    log.error("❌ Error manejado por GlobalExceptionHandler: {}", errorResponse.getMessage());
+                    return ServerResponse.status(status)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(errorResponse);
+                });
+    }
+
+    private HttpStatus resolveHttpStatus(Throwable error) {
         if (error instanceof IllegalArgumentException) {
-            status = HttpStatus.BAD_REQUEST;
+            return HttpStatus.BAD_REQUEST;
+        } else if (error instanceof UnauthorizedException) {
+            return HttpStatus.UNAUTHORIZED;
+        } else if (error instanceof ForbiddenException) {
+            return HttpStatus.FORBIDDEN;
         } else {
-            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            return HttpStatus.INTERNAL_SERVER_ERROR;
         }
-
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .status(status.value())
-                .message(error.getMessage())
-                .path(request.toString())
-                .timestamp(LocalDateTime.now())
-                .build();
-        log.error("❌ Error manejado por GlobalExceptionHandler: {}", errorResponse.getMessage());
-
-        return ServerResponse.status(status)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(errorResponse);
     }
 }
