@@ -12,6 +12,8 @@ import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 
 import java.util.List;
 
@@ -29,8 +31,6 @@ import co.com.powerup.api.dtos.response.RequestClientResponse;
 import co.com.powerup.api.dtos.response.RequestStatusResponse;
 import co.com.powerup.api.dtos.response.RequestTypeResponse;
 
-
-
 @Configuration
 public class OpenApiConfig {
     @Bean
@@ -46,12 +46,20 @@ public class OpenApiConfig {
     @Primary
     public OpenApiCustomizer customizer() {
         return openApi -> {
+            openApi.getComponents()
+                    .addSecuritySchemes("bearerAuth",
+                            new SecurityScheme()
+                                    .type(SecurityScheme.Type.HTTP)
+                                    .scheme("bearer")
+                                    .bearerFormat("JWT"));
+            openApi.addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
 
             PathItem requestTypePath = new PathItem()
                     .get(new Operation()
                             .operationId("findRequestTypes")
                             .tags(List.of("RequestType"))
                             .summary("Obtiene todos los tipos de solicitudes")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                             .responses(new ApiResponses()
                                     .addApiResponse("200", new ApiResponse()
                                             .description("Lista de tipos de solicitudes")
@@ -59,31 +67,29 @@ public class OpenApiConfig {
                                                     .addMediaType("application/json",
                                                             new io.swagger.v3.oas.models.media.MediaType()
                                                                     .schema(new ArraySchema().items(
-                                                                            new Schema<>().$ref("#/components/schemas/RequestTypeResponse")
-                                                                    ))
-                                                    )
-                                            )
-                                    )
-                            )
-                    )
+                                                                            new Schema<>().$ref(
+                                                                                    "#/components/schemas/RequestTypeResponse"))))))))
                     .post(new Operation()
                             .operationId("saveRequestType")
                             .tags(List.of("RequestType"))
                             .summary("Crea un nuevo tipo de solicitud")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                             .requestBody(new RequestBody()
                                     .description("DTO para crear un tipo de solicitud")
                                     .required(true)
                                     .content(new Content()
                                             .addMediaType("application/json",
                                                     new io.swagger.v3.oas.models.media.MediaType()
-                                                            .schema(new Schema<>().$ref("#/components/schemas/RequestTypeCreateDTO")))))
+                                                            .schema(new Schema<>().$ref(
+                                                                    "#/components/schemas/RequestTypeCreateDTO")))))
                             .responses(new ApiResponses()
                                     .addApiResponse("200", new ApiResponse()
                                             .description("Tipo de solicitud creado")
                                             .content(new Content()
                                                     .addMediaType("application/json",
                                                             new io.swagger.v3.oas.models.media.MediaType()
-                                                                    .schema(new Schema<>().$ref("#/components/schemas/RequestTypeResponse")))))));
+                                                                    .schema(new Schema<>().$ref(
+                                                                            "#/components/schemas/RequestTypeResponse")))))));
 
             openApi.path("/api/v1/request-type", requestTypePath);
 
@@ -92,6 +98,7 @@ public class OpenApiConfig {
                             .operationId("findRequests")
                             .tags(List.of("RequestClient"))
                             .summary("Obtiene todos las solicitudes de clientes")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                             .responses(new ApiResponses()
                                     .addApiResponse("200", new ApiResponse()
                                             .description("Lista de solicitudes de clientes")
@@ -99,31 +106,29 @@ public class OpenApiConfig {
                                                     .addMediaType("application/json",
                                                             new io.swagger.v3.oas.models.media.MediaType()
                                                                     .schema(new ArraySchema().items(
-                                                                            new Schema<>().$ref("#/components/schemas/RequestClientResponse")
-                                                                    ))
-                                                    )
-                                            )
-                                    )
-                            )
-                    )
+                                                                            new Schema<>().$ref(
+                                                                                    "#/components/schemas/RequestClientResponse"))))))))
                     .post(new Operation()
                             .operationId("saveRequest")
                             .tags(List.of("RequestClient"))
                             .summary("Crea una nueva solicitud de cliente")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                             .requestBody(new RequestBody()
                                     .description("DTO para crear una solicitud de cliente")
                                     .required(true)
                                     .content(new Content()
                                             .addMediaType("application/json",
                                                     new io.swagger.v3.oas.models.media.MediaType()
-                                                            .schema(new Schema<>().$ref("#/components/schemas/RequestClientCreateDTO")))))
+                                                            .schema(new Schema<>().$ref(
+                                                                    "#/components/schemas/RequestClientCreateDTO")))))
                             .responses(new ApiResponses()
                                     .addApiResponse("200", new ApiResponse()
                                             .description("Solicitud de cliente creada")
                                             .content(new Content()
                                                     .addMediaType("application/json",
                                                             new io.swagger.v3.oas.models.media.MediaType()
-                                                                    .schema(new Schema<>().$ref("#/components/schemas/RequestClientResponse")))))));
+                                                                    .schema(new Schema<>().$ref(
+                                                                            "#/components/schemas/RequestClientResponse")))))));
 
             openApi.path("/api/v1/request", requestClientPath);
 
@@ -132,6 +137,7 @@ public class OpenApiConfig {
                             .operationId("findRequestStatuses")
                             .tags(List.of("RequestStatus"))
                             .summary("Obtiene todos los estados de solicitudes")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                             .responses(new ApiResponses()
                                     .addApiResponse("200", new ApiResponse()
                                             .description("Lista de estados de solicitudes")
@@ -139,31 +145,29 @@ public class OpenApiConfig {
                                                     .addMediaType("application/json",
                                                             new io.swagger.v3.oas.models.media.MediaType()
                                                                     .schema(new ArraySchema().items(
-                                                                            new Schema<>().$ref("#/components/schemas/RequestStatusResponse")
-                                                                    ))
-                                                    )
-                                            )
-                                    )
-                            )
-                    )
+                                                                            new Schema<>().$ref(
+                                                                                    "#/components/schemas/RequestStatusResponse"))))))))
                     .post(new Operation()
                             .operationId("saveRequestStatus")
                             .tags(List.of("RequestStatus"))
                             .summary("Crea un nuevo estado de solicitud")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                             .requestBody(new RequestBody()
                                     .description("DTO para crear un estado de solicitud")
                                     .required(true)
                                     .content(new Content()
                                             .addMediaType("application/json",
                                                     new io.swagger.v3.oas.models.media.MediaType()
-                                                            .schema(new Schema<>().$ref("#/components/schemas/RequestStatusCreateDTO")))))
+                                                            .schema(new Schema<>().$ref(
+                                                                    "#/components/schemas/RequestStatusCreateDTO")))))
                             .responses(new ApiResponses()
                                     .addApiResponse("200", new ApiResponse()
                                             .description("Estado de request solicitud")
                                             .content(new Content()
                                                     .addMediaType("application/json",
                                                             new io.swagger.v3.oas.models.media.MediaType()
-                                                                    .schema(new Schema<>().$ref("#/components/schemas/RequestStatusResponse")))))));
+                                                                    .schema(new Schema<>().$ref(
+                                                                            "#/components/schemas/RequestStatusResponse")))))));
 
             openApi.path("/api/v1/status-request", requestStatusPath);
 
@@ -209,8 +213,4 @@ public class OpenApiConfig {
         };
     }
 
-
-    
 }
-
-

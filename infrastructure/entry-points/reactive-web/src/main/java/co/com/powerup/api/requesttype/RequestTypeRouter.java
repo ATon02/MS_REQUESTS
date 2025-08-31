@@ -17,9 +17,9 @@ import java.util.List;
 public class RequestTypeRouter {
     @Bean
     public RouterFunction<ServerResponse> requestTypeRouterFunction(RequestTypeHandler handler, JwtAuthenticationFilter filter) {
-        RouterFunction<ServerResponse> find = route(GET("/api/v1/status-type"), handler::find)
+        RouterFunction<ServerResponse> find = route(GET("/api/v1/request-type"), handler::find)
                 .filter(filter.requireRole(List.of("admin")));
-        RouterFunction<ServerResponse> save = route(POST("/api/v1/status-type"), handler::save)
+        RouterFunction<ServerResponse> save = route(POST("/api/v1/request-type"), handler::save)
                 .filter(filter.requireRole(List.of("admin")));
         return find.and(save);
     }
