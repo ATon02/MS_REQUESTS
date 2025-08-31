@@ -22,7 +22,9 @@ public class RequestClientRouter {
                 .filter(filter.requireRole(List.of("admin","asesor")));
         RouterFunction<ServerResponse> save = route(POST("/api/v1/request"), handler::save)
                 .filter(filter.requireRole(List.of("cliente")));
-        return find.and(save);
+        RouterFunction<ServerResponse> findFilter = route(GET("/api/v1/request"), handler::findByFilter)
+                .filter(filter.requireRole(List.of("asesor")));
+        return find.and(save).and(findFilter);
     }
 }
 

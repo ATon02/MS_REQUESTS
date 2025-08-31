@@ -1,8 +1,17 @@
 package co.com.powerup.usecase.requestclient;
 
+import java.util.List;
+import java.util.Optional;
+
 import co.com.powerup.model.requestclient.RequestClient;
 import co.com.powerup.model.requestclient.gateways.RequestClientRepository;
+import co.com.powerup.model.requeststatus.RequestStatus;
+import co.com.powerup.model.requeststatus.gateways.RequestStatusRepository;
+import co.com.powerup.model.requesttype.RequestType;
 import co.com.powerup.model.requesttype.gateways.RequestTypeRepository;
+import co.com.powerup.model.userinfo.UserInfo;
+import co.com.powerup.model.userinfo.gateways.UserInfoRepository;
+import co.com.powerup.usecase.requestclient.dto.ResponseDataRequest;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -12,6 +21,11 @@ public class RequestClientUseCase implements IRequestClientUseCase {
 
     private final RequestClientRepository requestClientRepository;
     private final RequestTypeRepository requestTypeRepository;
+    private final UserInfoRepository userInfoRepository;
+    private final RequestStatusRepository requestStatusRepository;
+
+    private static final List<Long> ESTADOS_ASESOR = List.of(1L, 3L, 5L);
+
 
 
     @Override
@@ -55,10 +69,57 @@ public class RequestClientUseCase implements IRequestClientUseCase {
             });
     }
 
-
-
     @Override
     public Flux<RequestClient> findAll() {
         return requestClientRepository.findAll();
     }
+
+    @Override
+    public Flux<ResponseDataRequest> findByFilter(List<Long> statusIds, Integer page, Integer size, String authorization) {
+        if (page == null || size == null || page <= 0 || size <= 0) {
+            return Flux.error(new IllegalArgumentException("Los parámetros de página y tamaño deben ser mayores a 0."));
+        }
+        int offset = (page - 1) * size;
+        if (!ESTADOS_ASESOR.containsAll(statusIds)) {
+            return Flux.error(new IllegalArgumentException("Solo se pueden filtrar los estados permitidos para el asesor (1)Pendiente por revisión,(3)Rechazada,(5)Revision manual"));
+        }
+        return requestClientRepository.findByStatusIds((statusIds == null || statusIds.isEmpty()) ? ESTADOS_ASESOR : statusIds, offset, size)
+            .flatMap(requestClient -> buildResponseDataRequest(requestClient, authorization));
+    }
+
+    private Mono<ResponseDataRequest> buildResponseDataRequest(RequestClient requestClient,String authorization) {
+        Mono<RequestType> requestTypeMono = requestTypeRepository.findById(requestClient.getRequestTypeId())
+            .switchIfEmpty(Mono.error(
+                new IllegalArgumentException("Tipo de la solicitud " + requestClient.getId() + " no encontrado")
+            ));
+        Mono<RequestStatus> requestStatusMono = requestStatusRepository.findById(requestClient.getStatusId())
+            .switchIfEmpty(Mono.error(
+                new IllegalArgumentException("Estado de solicitud " + requestClient.getId() + " no encontrado")
+            ));
+        Mono<UserInfo> userInfoMono = userInfoRepository.findByEmail(requestClient.getEmail(), authorization)
+            .switchIfEmpty(Mono.error(
+                new IllegalArgumentException("Información del usuario con email " + requestClient.getEmail() + " no encontrada")
+            ));
+        return Mono.zip(requestTypeMono, requestStatusMono, userInfoMono)
+            .map(tuple -> {
+                RequestType requestType = tuple.getT1();
+                RequestStatus requestStatus = tuple.getT2();
+                UserInfo userInfo = tuple.getT3();
+                return ResponseDataRequest.builder()
+                    .id(requestClient.getId())
+                    .amount(requestClient.getAmount())
+                    .deadline(requestClient.getDeadline())
+                    .email(requestClient.getEmail())
+                    .name(Optional.ofNullable(userInfo.getName()).orElse("Nombre no disponible"))
+                    .baseSalary(Optional.ofNullable(userInfo.getBaseSalary()).orElse(0.0))
+                    .totalMonthlyDebt((requestClient.getAmount()*(requestType.getInterestRate()*100))/requestClient.getDeadline())
+                    .interestRate(Optional.ofNullable(requestType.getInterestRate()).orElse(0.0))
+                    .requestType(requestType.getName())
+                    .requestStatus(requestStatus.getName())
+                    .build();
+            });
+    }
+
+
+
 }

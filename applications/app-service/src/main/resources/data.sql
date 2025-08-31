@@ -10,6 +10,8 @@ VALUES
     ('Pendiente por revisión', 'La solicitud está pendiente de ser revisada por un asesor'),
     ('Aprobada', 'La solicitud ha sido aprobada'),
     ('Rechazada', 'La solicitud ha sido rechazada'),
-    ('En proceso', 'La solicitud está siendo procesada')
+    ('En proceso', 'La solicitud está siendo procesada'),
+    ('Revision manual', 'La solicitud requiere revisión manual por un asesor')
 ON CONFLICT (name) DO NOTHING;
+
 

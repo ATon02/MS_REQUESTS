@@ -5,6 +5,9 @@ import co.com.powerup.model.requestclient.gateways.RequestClientRepository;
 import co.com.powerup.r2dbc.entity.RequestClientEntity;
 import co.com.powerup.r2dbc.helper.ReactiveAdapterOperations;
 import co.com.powerup.r2dbc.repository.RequestClientReactiveRepository;
+import reactor.core.publisher.Flux;
+
+import java.util.List;
 
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
@@ -23,6 +26,12 @@ public class RequestClientReactiveRepositoryAdapter extends ReactiveAdapterOpera
          *  Or using mapper.map with the class of the object model
          */
         super(repository, mapper, d -> mapper.map(d, RequestClient.class/* change for domain model */));
+    }
+
+    @Override
+    public Flux<RequestClient> findByStatusIds(List<Long> statusIds, int offset, int size) {
+        return repository.findByStatusIds(statusIds, offset, size)
+            .map(entity -> mapper.map(entity, RequestClient.class)); 
     }
 
 }

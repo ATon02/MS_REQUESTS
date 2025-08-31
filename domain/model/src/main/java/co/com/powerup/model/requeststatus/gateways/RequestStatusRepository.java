@@ -8,5 +8,6 @@ import reactor.core.publisher.Mono;
 public interface RequestStatusRepository {
 
     Mono<RequestStatus> save(RequestStatus RequestStatus); 
+    Mono<RequestStatus> findById(Long id); 
     Flux<RequestStatus> findAll();
 }

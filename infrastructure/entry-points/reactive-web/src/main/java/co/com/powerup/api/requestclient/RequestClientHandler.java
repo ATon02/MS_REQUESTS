@@ -3,6 +3,11 @@ package co.com.powerup.api.requestclient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -52,4 +57,21 @@ public class RequestClientHandler {
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestClient));  
     }
+
+    public Mono<ServerResponse> findByFilter(ServerRequest serverRequest) {
+        log.info("➡️ Entró al handler findByFilter() de RequestClientHandler");
+
+        Integer page = Integer.parseInt(serverRequest.queryParam("page").orElse("1"));
+        Integer size = Integer.parseInt(serverRequest.queryParam("size").orElse("10"));
+        List<Long> statusIds = serverRequest.queryParam("status").map(s -> Arrays.stream(s.split(","))
+                        .map(Long::parseLong).collect(Collectors.toList())).orElse(Collections.emptyList());
+        String token = serverRequest.headers()
+                                .firstHeader("Authorization");
+        return requestClientUseCase.findByFilter(statusIds, page, size, token)
+                .collectList()
+                .flatMap(requests -> ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(requests));
+    }
+
 }

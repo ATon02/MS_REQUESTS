@@ -9,6 +9,7 @@ import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.NumberSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
+import io.swagger.v3.oas.models.parameters.QueryParameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
@@ -30,6 +31,7 @@ import co.com.powerup.api.dtos.response.ErrorResponse;
 import co.com.powerup.api.dtos.response.RequestClientResponse;
 import co.com.powerup.api.dtos.response.RequestStatusResponse;
 import co.com.powerup.api.dtos.response.RequestTypeResponse;
+import co.com.powerup.usecase.requestclient.dto.ResponseDataRequest;
 
 @Configuration
 public class OpenApiConfig {
@@ -53,7 +55,7 @@ public class OpenApiConfig {
                                     .scheme("bearer")
                                     .bearerFormat("JWT"));
             openApi.addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
-
+            // REQUEST TYPE
             PathItem requestTypePath = new PathItem()
                     .get(new Operation()
                             .operationId("findRequestTypes")
@@ -92,22 +94,35 @@ public class OpenApiConfig {
                                                                             "#/components/schemas/RequestTypeResponse")))))));
 
             openApi.path("/api/v1/request-type", requestTypePath);
-
+            // REQUEST CLIENT
             PathItem requestClientPath = new PathItem()
                     .get(new Operation()
-                            .operationId("findRequests")
+                            .operationId("findRequestsFilter")
                             .tags(List.of("RequestClient"))
-                            .summary("Obtiene todos las solicitudes de clientes")
+                            .summary("Obtiene todas las solicitudes de clientes filtradas por estado (1)Pendiente por revisión,(3)Rechazada,(5)Revision manual y paginadas")
+                            .description("Devuelve una lista paginada de solicitudes de clientes según los filtros proporcionados.")
                             .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                            .addParametersItem(new QueryParameter()
+                                    .name("page")
+                                    .description("Número de página (1 por defecto)")
+                                    .schema(new IntegerSchema()._default(1)))
+                            .addParametersItem(new QueryParameter()
+                                    .name("size")
+                                    .description("Cantidad de registros por página (10 por defecto)")
+                                    .schema(new IntegerSchema()._default(10)))
+                            .addParametersItem(new QueryParameter()
+                                    .name("status")
+                                    .description("Lista de IDs de estados para filtrar, separados por coma")
+                                    .schema(new StringSchema()))
                             .responses(new ApiResponses()
                                     .addApiResponse("200", new ApiResponse()
                                             .description("Lista de solicitudes de clientes")
                                             .content(new Content()
                                                     .addMediaType("application/json",
                                                             new io.swagger.v3.oas.models.media.MediaType()
-                                                                    .schema(new ArraySchema().items(
-                                                                            new Schema<>().$ref(
-                                                                                    "#/components/schemas/RequestClientResponse"))))))))
+                                                                    .schema(new ArraySchema()
+                                                                            .items(new Schema<>().$ref(
+                                                                                    "#/components/schemas/ResponseDataRequest"))))))))
                     .post(new Operation()
                             .operationId("saveRequest")
                             .tags(List.of("RequestClient"))
@@ -131,7 +146,23 @@ public class OpenApiConfig {
                                                                             "#/components/schemas/RequestClientResponse")))))));
 
             openApi.path("/api/v1/request", requestClientPath);
-
+            PathItem requestClientPathAll = new PathItem()
+                    .get(new Operation()
+                            .operationId("findRequests")
+                            .tags(List.of("RequestClient"))
+                            .summary("Obtiene todos las solicitudes de clientes")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                            .responses(new ApiResponses()
+                                    .addApiResponse("200", new ApiResponse()
+                                            .description("Lista de solicitudes de clientes")
+                                            .content(new Content()
+                                                    .addMediaType("application/json",
+                                                            new io.swagger.v3.oas.models.media.MediaType()
+                                                                    .schema(new ArraySchema().items(
+                                                                            new Schema<>().$ref(
+                                                                                    "#/components/schemas/RequestClientResponse"))))))));
+            openApi.path("/api/v1/request/all", requestClientPathAll);
+            // REQUEST STATUS
             PathItem requestStatusPath = new PathItem()
                     .get(new Operation()
                             .operationId("findRequestStatuses")
@@ -209,7 +240,18 @@ public class OpenApiConfig {
                             .addProperty("status", new IntegerSchema().format("int32"))
                             .addProperty("message", new StringSchema())
                             .addProperty("path", new StringSchema())
-                            .addProperty("timestamp", new StringSchema().format("date-time")));
+                            .addProperty("timestamp", new StringSchema().format("date-time")))
+                    .addSchemas("ResponseDataRequest", new Schema<ResponseDataRequest>()
+                            .addProperty("id", new IntegerSchema())
+                            .addProperty("amount", new NumberSchema())
+                            .addProperty("deadline", new IntegerSchema())
+                            .addProperty("email", new StringSchema())
+                            .addProperty("name", new StringSchema())
+                            .addProperty("requestType", new StringSchema())
+                            .addProperty("requestStatus", new StringSchema())
+                            .addProperty("baseSalary", new NumberSchema().format("double"))
+                            .addProperty("totalMonthlyDebt", new NumberSchema().format("double"))
+                            .addProperty("interestRate", new NumberSchema().format("double")));
         };
     }
 

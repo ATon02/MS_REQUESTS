@@ -1,6 +1,9 @@
 package co.com.powerup.usecase.requestclient;
 
+import java.util.List;
+
 import co.com.powerup.model.requestclient.RequestClient;
+import co.com.powerup.usecase.requestclient.dto.ResponseDataRequest;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -8,5 +11,6 @@ public interface IRequestClientUseCase {
 
     Mono<RequestClient> saveRequest(RequestClient requestClient);
     Flux<RequestClient> findAll();
+    Flux<ResponseDataRequest> findByFilter(List<Long> status, Integer page, Integer size, String authorization );
 
 }
