@@ -18,7 +18,7 @@ public class RequestClientRouter {
 
     @Bean
     public RouterFunction<ServerResponse> requestClientRouterFunction(RequestClientHandler handler, JwtAuthenticationFilter filter) {
-        RouterFunction<ServerResponse> find = route(GET("/api/v1/request"), handler::find)
+        RouterFunction<ServerResponse> find = route(GET("/api/v1/request/all"), handler::find)
                 .filter(filter.requireRole(List.of("admin","asesor")));
         RouterFunction<ServerResponse> save = route(POST("/api/v1/request"), handler::save)
                 .filter(filter.requireRole(List.of("cliente")));
