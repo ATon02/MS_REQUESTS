@@ -1,5 +1,6 @@
 package co.com.powerup.authintercomrest;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import co.com.powerup.model.userinfo.gateways.UserInfoRepository;
@@ -12,8 +13,9 @@ public class AuthIntercomRestAdapter implements UserInfoRepository {
 
     private final WebClient webClient;
 
-    public AuthIntercomRestAdapter(WebClient.Builder builder) {
-        this.webClient = builder.baseUrl("http://localhost:8080").build();
+    public AuthIntercomRestAdapter(WebClient.Builder builder,
+                                   @Value("${spring.intercom.auth.host}") String authHost) {
+        this.webClient = builder.baseUrl(authHost).build();
     }
 
     @Override
