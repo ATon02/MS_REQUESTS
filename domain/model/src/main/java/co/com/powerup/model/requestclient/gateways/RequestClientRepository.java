@@ -11,5 +11,6 @@ public interface RequestClientRepository {
     Mono<RequestClient> save(RequestClient requestType); 
     Flux<RequestClient> findAll();
     Flux<RequestClient> findByStatusIds(List<Long> statusIds, int offset, int size);
+    Mono<RequestClient> findById(Long id); 
     
 }

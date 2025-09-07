@@ -9,6 +9,7 @@ import co.com.powerup.api.config.JwtAuthenticationFilter;
 
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
+import static org.springframework.web.reactive.function.server.RequestPredicates.PUT;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
 import java.util.List;
@@ -24,7 +25,9 @@ public class RequestClientRouter {
                 .filter(filter.requireRole(List.of("cliente")));
         RouterFunction<ServerResponse> findFilter = route(GET("/api/v1/request"), handler::findByFilter)
                 .filter(filter.requireRole(List.of("asesor")));
-        return find.and(save).and(findFilter);
+        RouterFunction<ServerResponse> updateStatus = route(PUT("/api/v1/request/{id}"), handler::updateStatus)
+                .filter(filter.requireRole(List.of("asesor")));
+        return find.and(save).and(findFilter).and(updateStatus);
     }
 }
 

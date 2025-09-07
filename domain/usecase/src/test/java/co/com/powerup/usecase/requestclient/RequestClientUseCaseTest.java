@@ -1,5 +1,6 @@
 package co.com.powerup.usecase.requestclient;
 
+import co.com.powerup.model.messagequeue.gateways.MessageQueueRepository;
 import co.com.powerup.model.requestclient.RequestClient;
 import co.com.powerup.model.requestclient.gateways.RequestClientRepository;
 import co.com.powerup.model.requeststatus.RequestStatus;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
+import java.util.Map;
 
 @ExtendWith(MockitoExtension.class)
 class RequestClientUseCaseTest {
@@ -39,6 +41,9 @@ class RequestClientUseCaseTest {
 
     @Mock
     private UserInfoRepository userInfoRepository;
+
+    @Mock
+    private MessageQueueRepository messageQueueRepository;
 
     @InjectMocks
     private RequestClientUseCase requestClientUseCase;
@@ -297,5 +302,91 @@ class RequestClientUseCaseTest {
                         e.getMessage().contains("Información del usuario"))
                 .verify();
     }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void updateStatus_Success() {
+        Long requestId = 1L;
+        Long statusId = 2L;
+
+        RequestClient client = new RequestClient();
+        client.setId(requestId);
+        client.setStatusId(1L);
+        client.setEmail("test@email.com");
+
+        RequestStatus status = new RequestStatus();
+        status.setId(statusId);
+        status.setName("Aprobada");
+
+        when(requestClientRepository.findById(requestId)).thenReturn(Mono.just(client));
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.just(status));
+        when(requestClientRepository.save(any(RequestClient.class))).thenReturn(Mono.just(client));
+        when(messageQueueRepository.sendMessageChangeStatus(any(Map.class))).thenReturn(Mono.empty());
+
+        Mono<RequestClient> result = requestClientUseCase.updateStatus(requestId, statusId);
+
+        StepVerifier.create(result)
+                .expectNextMatches(savedClient -> savedClient.getStatusId().equals(statusId))
+                .verifyComplete();
+
+        verify(messageQueueRepository, times(1)).sendMessageChangeStatus(any(Map.class));
+    }
+
+    @Test
+    void updateStatus_RequestNotFound() {
+        Long requestId = 1L;
+        Long statusId = 2L;
+
+        when(requestClientRepository.findById(requestId)).thenReturn(Mono.empty());
+
+        Mono<RequestClient> result = requestClientUseCase.updateStatus(requestId, statusId);
+
+        StepVerifier.create(result)
+                .expectErrorMessage("Solicitud con id " + requestId + " no encontrada")
+                .verify();
+    }
+
+    @Test
+    void updateStatus_StatusNotFound() {
+        Long requestId = 1L;
+        Long statusId = 2L;
+
+        RequestClient client = new RequestClient();
+        client.setId(requestId);
+        client.setStatusId(1L);
+
+        when(requestClientRepository.findById(requestId)).thenReturn(Mono.just(client));
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.empty());
+
+        Mono<RequestClient> result = requestClientUseCase.updateStatus(requestId, statusId);
+
+        StepVerifier.create(result)
+                .expectErrorMessage("Estado con id " + statusId + " no encontrado")
+                .verify();
+    }
+
+    @Test
+    void updateStatus_StatusAlreadyCurrent() {
+        Long requestId = 1L;
+        Long statusId = 1L;
+
+        RequestClient client = new RequestClient();
+        client.setId(requestId);
+        client.setStatusId(statusId);
+
+        RequestStatus status = new RequestStatus();
+        status.setId(statusId);
+        status.setName("Aprobada");
+
+        when(requestClientRepository.findById(requestId)).thenReturn(Mono.just(client));
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.just(status));
+
+        Mono<RequestClient> result = requestClientUseCase.updateStatus(requestId, statusId);
+
+        StepVerifier.create(result)
+                .expectErrorMessage("La solicitud ya se encuentra en el estado solicitado")
+                .verify();
+    }
+
 
 }

@@ -25,7 +25,7 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class RequestClientHandler {
 
-    private  final RequestClientDTOMapper  requestClientDTOMapper;
+    private final RequestClientDTOMapper requestClientDTOMapper;
     private final IRequestClientUseCase requestClientUseCase;
 
     public Mono<ServerResponse> find(ServerRequest serverRequest) {
@@ -38,24 +38,26 @@ public class RequestClientHandler {
                         .bodyValue(requests));
 
     }
+
     @SuppressWarnings("null")
     public Mono<ServerResponse> save(ServerRequest serverRequest) {
         log.info("➡️ Entró al handler save() de RequestClientHandler");
         Claims claims = (Claims) serverRequest.exchange().getAttribute("claims");
         String emailSub = claims.getSubject();
         return serverRequest.bodyToMono(RequestClientCreateDTO.class)
-            .switchIfEmpty(Mono.error(new IllegalArgumentException("El body no puede ser null")))
-            .map(requestClientDTOMapper::toModel)
-            .flatMap(user -> {
-                if (!user.getEmail().equals(emailSub)) {
-                    return Mono.error(new ForbiddenException("El email de la solicitud no coincide con el del solicitante"));
-                }
-                return requestClientUseCase.saveRequest(user);
-            })              
-            .map(requestClientDTOMapper::toResponse)         
-            .flatMap(requestClient -> ServerResponse.ok()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(requestClient));  
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("El body no puede ser null")))
+                .map(requestClientDTOMapper::toModel)
+                .flatMap(user -> {
+                    if (!user.getEmail().equals(emailSub)) {
+                        return Mono.error(
+                                new ForbiddenException("El email de la solicitud no coincide con el del solicitante"));
+                    }
+                    return requestClientUseCase.saveRequest(user);
+                })
+                .map(requestClientDTOMapper::toResponse)
+                .flatMap(requestClient -> ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(requestClient));
     }
 
     public Mono<ServerResponse> findByFilter(ServerRequest serverRequest) {
@@ -64,14 +66,27 @@ public class RequestClientHandler {
         Integer page = Integer.parseInt(serverRequest.queryParam("page").orElse("1"));
         Integer size = Integer.parseInt(serverRequest.queryParam("size").orElse("10"));
         List<Long> statusIds = serverRequest.queryParam("status").map(s -> Arrays.stream(s.split(","))
-                        .map(Long::parseLong).collect(Collectors.toList())).orElse(Collections.emptyList());
+                .map(Long::parseLong).collect(Collectors.toList())).orElse(Collections.emptyList());
         String token = serverRequest.headers()
-                                .firstHeader("Authorization");
+                .firstHeader("Authorization");
         return requestClientUseCase.findByFilter(statusIds, page, size, token)
                 .collectList()
                 .flatMap(requests -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(requests));
+    }
+
+    public Mono<ServerResponse> updateStatus(ServerRequest serverRequest) {
+        log.info("➡️ Entró al handler updateStatus() de RequestClientHandler");
+        Long requestId = Long.parseLong(serverRequest.pathVariable("id"));
+        Long statusId = serverRequest.queryParam("statusId")
+                .map(Long::parseLong)
+                .orElseThrow(() -> new IllegalArgumentException("statusId es requerido"));
+
+        return requestClientUseCase.updateStatus(requestId, statusId)
+                .flatMap(updated -> ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(updated));
     }
 
 }

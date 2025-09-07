@@ -34,3 +34,7 @@ management:
         enabled: true
 cors:
   allowed-origins: "http://localhost:4200,http://localhost:8081"
+adapter:
+  sqs:
+    region: "${SPRING_SQS_REGION}"
+    queueUrl: "${SPRING_SQS_URL}"

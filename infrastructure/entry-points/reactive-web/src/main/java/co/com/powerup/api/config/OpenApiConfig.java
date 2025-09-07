@@ -9,6 +9,7 @@ import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.NumberSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
+import io.swagger.v3.oas.models.parameters.PathParameter;
 import io.swagger.v3.oas.models.parameters.QueryParameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
@@ -99,8 +100,10 @@ public class OpenApiConfig {
                     .get(new Operation()
                             .operationId("findRequestsFilter")
                             .tags(List.of("RequestClient"))
-                            .summary("Obtiene todas las solicitudes de clientes filtradas por estado (1)Pendiente por revisión,(3)Rechazada,(5)Revision manual y paginadas")
-                            .description("Devuelve una lista paginada de solicitudes de clientes según los filtros proporcionados.")
+                            .summary(
+                                    "Obtiene todas las solicitudes de clientes filtradas por estado (1)Pendiente por revisión,(3)Rechazada,(5)Revision manual y paginadas")
+                            .description(
+                                    "Devuelve una lista paginada de solicitudes de clientes según los filtros proporcionados.")
                             .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                             .addParametersItem(new QueryParameter()
                                     .name("page")
@@ -144,8 +147,34 @@ public class OpenApiConfig {
                                                             new io.swagger.v3.oas.models.media.MediaType()
                                                                     .schema(new Schema<>().$ref(
                                                                             "#/components/schemas/RequestClientResponse")))))));
-
             openApi.path("/api/v1/request", requestClientPath);
+            PathItem updateRequest = new PathItem()
+                    .put(new Operation()
+                            .operationId("updateStatusRequest")
+                            .tags(List.of("RequestClient"))
+                            .summary("Actualiza el estado de una solicitud de cliente")
+                            .description(
+                                    "Actualiza el estado de una solicitud según el ID proporcionado. Requiere role 'asesor'.")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                            .addParametersItem(new PathParameter()
+                                    .name("id")
+                                    .description("ID de la solicitud a actualizar")
+                                    .required(true)
+                                    .schema(new IntegerSchema()))
+                            .addParametersItem(new QueryParameter()
+                                    .name("statusId")
+                                    .description("ID del nuevo estado a asignar")
+                                    .required(true)
+                                    .schema(new IntegerSchema()))
+                            .responses(new ApiResponses()
+                                    .addApiResponse("200", new ApiResponse()
+                                            .description("Solicitud de cliente actualizada correctamente")
+                                            .content(new Content()
+                                                    .addMediaType("application/json",
+                                                            new io.swagger.v3.oas.models.media.MediaType()
+                                                                    .schema(new Schema<>().$ref(
+                                                                            "#/components/schemas/RequestClientResponse")))))));
+            openApi.path("/api/v1/request/{id}", updateRequest);
             PathItem requestClientPathAll = new PathItem()
                     .get(new Operation()
                             .operationId("findRequests")

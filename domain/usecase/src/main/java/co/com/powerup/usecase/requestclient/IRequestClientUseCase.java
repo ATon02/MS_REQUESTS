@@ -12,5 +12,7 @@ public interface IRequestClientUseCase {
     Mono<RequestClient> saveRequest(RequestClient requestClient);
     Flux<RequestClient> findAll();
     Flux<ResponseDataRequest> findByFilter(List<Long> status, Integer page, Integer size, String authorization );
+    Mono<RequestClient> updateStatus(Long requestId, Long statusId);
+
 
 }
