@@ -193,4 +193,22 @@ public class RequestClientUseCase implements IRequestClientUseCase {
                         }));
     }
 
+
+    @Override
+    public Mono<RequestClient> updateStatusListener(Long requestId, Long statusId) {
+        return requestClientRepository.findById(requestId)
+                .switchIfEmpty(Mono.error(
+                        new IllegalArgumentException("Solicitud con id " + requestId + " no encontrada")))
+                .flatMap(requestClient -> requestStatusRepository.findById(statusId)
+                        .switchIfEmpty(Mono.error(
+                                new IllegalArgumentException("Estado con id " + statusId + " no encontrado")))
+                        .filter(status -> !statusId.equals(requestClient.getStatusId()))
+                        .switchIfEmpty(Mono.error(new IllegalArgumentException(
+                                "La solicitud ya se encuentra en el estado solicitado")))
+                        .flatMap(status -> {
+                            requestClient.setStatusId(status.getId());
+                            return requestClientRepository.save(requestClient);
+                        }));
+    }
+
 }

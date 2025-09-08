@@ -30,7 +30,7 @@ public class SQSProcessor implements Function<Message, Mono<Void>> {
                 return Mono.empty(); 
             })
             .flatMap(dto -> 
-                requestClientUseCase.updateStatus(dto.getRequestId(), dto.getStatusId())
+                requestClientUseCase.updateStatusListener(dto.getRequestId(), dto.getStatusId())
                     .doOnSuccess(v -> log.info("Estado actualizado para requestId={} con decisión={}", 
                                                 dto.getRequestId(), dto.getDecision()))
                     .onErrorResume(IllegalArgumentException.class, e -> {

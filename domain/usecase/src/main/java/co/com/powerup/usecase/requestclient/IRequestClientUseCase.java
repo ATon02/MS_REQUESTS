@@ -13,6 +13,6 @@ public interface IRequestClientUseCase {
     Flux<RequestClient> findAll();
     Flux<ResponseDataRequest> findByFilter(List<Long> status, Integer page, Integer size, String authorization );
     Mono<RequestClient> updateStatus(Long requestId, Long statusId);
-
+    Mono<RequestClient> updateStatusListener(Long requestId, Long statusId);
 
 }
