@@ -16,4 +16,6 @@ public interface RequestClientReactiveRepository extends ReactiveCrudRepository<
     @Query("SELECT * FROM request_client WHERE status_id IN (:statusIds) ORDER BY id DESC LIMIT :size OFFSET :offset")
     Flux<RequestClientEntity> findByStatusIds(@Param("statusIds") List<Long> statusIds, @Param("offset") int offset, @Param("size") int size);
 
+    Flux<RequestClientEntity> findByEmailAndStatusId(String email, Long statusId);
+
 }

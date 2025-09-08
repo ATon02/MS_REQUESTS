@@ -28,4 +28,14 @@ public class AuthIntercomRestAdapter implements UserInfoRepository {
                 .retrieve()
                 .bodyToMono(UserInfo.class);
     }
+
+    @Override
+    public Mono<UserInfo> selfSearch(String authorization) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/api/v1/users/find-by-email/self")
+                                             .build())
+                .header("Authorization", authorization)
+                .retrieve()
+                .bodyToMono(UserInfo.class);
+    }
 }

@@ -44,6 +44,8 @@ public class RequestClientHandler {
         log.info("➡️ Entró al handler save() de RequestClientHandler");
         Claims claims = (Claims) serverRequest.exchange().getAttribute("claims");
         String emailSub = claims.getSubject();
+        String token = serverRequest.headers()
+                .firstHeader("Authorization");
         return serverRequest.bodyToMono(RequestClientCreateDTO.class)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("El body no puede ser null")))
                 .map(requestClientDTOMapper::toModel)
@@ -52,7 +54,7 @@ public class RequestClientHandler {
                         return Mono.error(
                                 new ForbiddenException("El email de la solicitud no coincide con el del solicitante"));
                     }
-                    return requestClientUseCase.saveRequest(user);
+                    return requestClientUseCase.saveRequest(user,token);
                 })
                 .map(requestClientDTOMapper::toResponse)
                 .flatMap(requestClient -> ServerResponse.ok()

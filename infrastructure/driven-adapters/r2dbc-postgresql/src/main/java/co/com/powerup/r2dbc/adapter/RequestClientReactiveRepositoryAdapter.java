@@ -34,4 +34,10 @@ public class RequestClientReactiveRepositoryAdapter extends ReactiveAdapterOpera
             .map(entity -> mapper.map(entity, RequestClient.class)); 
     }
 
+    @Override
+    public Flux<RequestClient> findByEmailAndStatusId(String email, Long statusId) {
+        return repository.findByEmailAndStatusId(email, statusId)
+            .map(entity -> mapper.map(entity, RequestClient.class)); 
+    }
+
 }

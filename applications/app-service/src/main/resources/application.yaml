@@ -36,5 +36,18 @@ cors:
   allowed-origins: "http://localhost:4200,http://localhost:8081"
 adapter:
   sqs:
-    region: "${SPRING_SQS_REGION}"
-    queueUrl: "${SPRING_SQS_URL}"
+    statuschange:
+      region: "${SPRING_SQS_REGION_STATUSCHANGE}"
+      queueUrl: "${SPRING_SQS_URL_STATUSCHANGE}"
+    calculatedebtcapacity:
+      region: "${SPRING_SQS_REGION_CALCULATEDEBTCAPACITY}"
+      queueUrl: "${SPRING_SQS_URL_CALCULATEDEBTCAPACITY}"
+entrypoint:
+  sqs:
+    region: "${SPRING_SQS_REGION_RESULTCALCULATEDEBTCAPACITY}"
+    endpoint: "http://localhost:4566"
+    queueUrl: "${SPRING_SQS_URL_RESULTCALCULATEDEBTCAPACITY}"
+    waitTimeSeconds: 20
+    maxNumberOfMessages: 10
+    visibilityTimeoutSeconds: 10
+    numberOfThreads: 1

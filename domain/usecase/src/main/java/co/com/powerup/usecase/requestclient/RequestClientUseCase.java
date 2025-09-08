@@ -31,33 +31,27 @@ public class RequestClientUseCase implements IRequestClientUseCase {
     private static final List<Long> ESTADOS_ASESOR = List.of(1L, 3L, 5L);
 
     @Override
-    public Mono<RequestClient> saveRequest(RequestClient requestClient) {
+    public Mono<RequestClient> saveRequest(RequestClient requestClient, String authorization) {
         System.out.println("➡️ Entró al handler saveRequest() de RequestClientUseCase");
 
         if (requestClient.getRequestTypeId() == null) {
             return Mono.error(new IllegalArgumentException("El tipo de préstamo es obligatorio."));
         }
-
         if (requestClient.getIdentityDocument() == null || requestClient.getIdentityDocument().isBlank()) {
             return Mono.error(new IllegalArgumentException("El documento de identidad del cliente es obligatorio."));
         }
-
         if (requestClient.getEmail() == null || requestClient.getEmail().isBlank()) {
             return Mono.error(new IllegalArgumentException("El email es obligatorio."));
         }
-
         if (!requestClient.getEmail().matches("^[\\w-.]+@[\\w-]+\\.[a-z]{2,}$")) {
             return Mono.error(new IllegalArgumentException("El email tiene un formato inválido."));
         }
-
         if (requestClient.getAmount() == null || requestClient.getAmount() <= 0) {
             return Mono.error(new IllegalArgumentException("Monto no válido, debe ser mayor a 0."));
         }
-
         if (requestClient.getDeadline() == null || requestClient.getDeadline() <= 0) {
             return Mono.error(new IllegalArgumentException("El plazo debe ser mayor a 0."));
         }
-
         if (!requestClient.getIdentityDocument().matches("\\d+")) {
             return Mono.error(new IllegalArgumentException("El documento de identidad solo debe contener números."));
         }
@@ -66,8 +60,57 @@ public class RequestClientUseCase implements IRequestClientUseCase {
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("El tipo de préstamo no existe.")))
                 .flatMap(requestType -> {
                     requestClient.setStatusId(1L);
-                    return requestClientRepository.save(requestClient);
+
+                    return requestClientRepository.save(requestClient)
+                            .flatMap(savedRequest -> {
+                                if (Boolean.TRUE.equals(requestType.getAutomaticValidation())) {
+                                    return sendRequestForAutomaticValidation(savedRequest, authorization)
+                                    .thenReturn(savedRequest); 
+                                }
+                                return Mono.just(savedRequest);
+                            });
                 });
+    }
+
+    private Mono<Void> sendRequestForAutomaticValidation(RequestClient savedRequest, String authorization) {
+        return requestTypeRepository.findAll()
+                .collectMap(RequestType::getId) 
+                .flatMap(requestTypeMap -> requestClientRepository.findByEmailAndStatusId(savedRequest.getEmail(), 2L) 
+                        .collectList()
+                        .flatMap(
+                                activeRequests -> userInfoRepository.selfSearch(authorization)
+                                        .flatMap(userInfo -> {
+                                            RequestType currentType = requestTypeMap
+                                                    .get(savedRequest.getRequestTypeId());
+                                            Map<String, Object> currentRequest = new HashMap<>();
+                                            currentRequest.put("requestId", savedRequest.getId());
+                                            currentRequest.put("identityDocument", savedRequest.getIdentityDocument());
+                                            currentRequest.put("amount", savedRequest.getAmount());
+                                            currentRequest.put("deadline", savedRequest.getDeadline());
+                                            currentRequest.put("email", savedRequest.getEmail());
+                                            currentRequest.put("interestRate",
+                                                    currentType != null ? currentType.getInterestRate() : null);
+
+                                            List<Map<String, Object>> activeRequestsPayload = activeRequests.stream()
+                                                    .map(req -> {
+                                                        RequestType type = requestTypeMap.get(req.getRequestTypeId());
+                                                        Map<String, Object> reqPayload = new HashMap<>();
+                                                        reqPayload.put("requestId", req.getId());
+                                                        reqPayload.put("amount", req.getAmount());
+                                                        reqPayload.put("deadline", req.getDeadline());
+                                                        reqPayload.put("interestRate",
+                                                                type != null ? type.getInterestRate() : null);
+                                                        return reqPayload;
+                                                    })
+                                                    .toList();
+
+                                            Map<String, Object> message = new HashMap<>();
+                                            message.put("currentRequest", currentRequest);
+                                            message.put("activeRequests", activeRequestsPayload);
+                                            message.put("monthlyIncome", userInfo.getBaseSalary());
+
+                                            return messageQueueRepository.sendMessageCalculateDebtCapacity(message);
+                                        })));
     }
 
     @Override
@@ -135,7 +178,7 @@ public class RequestClientUseCase implements IRequestClientUseCase {
                                 new IllegalArgumentException("Estado con id " + statusId + " no encontrado")))
                         .filter(status -> !statusId.equals(requestClient.getStatusId()))
                         .switchIfEmpty(Mono.error(new IllegalArgumentException(
-                                "La solicitud ya se encuentra en el estado solicitado" )))
+                                "La solicitud ya se encuentra en el estado solicitado")))
                         .flatMap(status -> {
                             requestClient.setStatusId(status.getId());
                             return requestClientRepository.save(requestClient)

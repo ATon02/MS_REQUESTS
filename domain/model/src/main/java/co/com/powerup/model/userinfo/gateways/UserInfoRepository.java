@@ -6,4 +6,5 @@ import reactor.core.publisher.Mono;
 public interface UserInfoRepository {
 
     Mono<UserInfo> findByEmail(String email, String authorization);
+    Mono<UserInfo> selfSearch(String authorization);
 }

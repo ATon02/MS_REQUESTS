@@ -6,4 +6,5 @@ import reactor.core.publisher.Mono;
 
 public interface MessageQueueRepository {
     Mono<Void> sendMessageChangeStatus(Map<String, Object> messageMap);
+    Mono<Void> sendMessageCalculateDebtCapacity(Map<String, Object> messageMap);
 }

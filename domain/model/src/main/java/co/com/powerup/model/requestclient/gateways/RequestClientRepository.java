@@ -12,5 +12,6 @@ public interface RequestClientRepository {
     Flux<RequestClient> findAll();
     Flux<RequestClient> findByStatusIds(List<Long> statusIds, int offset, int size);
     Mono<RequestClient> findById(Long id); 
+    Flux<RequestClient> findByEmailAndStatusId(String email, Long statusId);
     
 }
