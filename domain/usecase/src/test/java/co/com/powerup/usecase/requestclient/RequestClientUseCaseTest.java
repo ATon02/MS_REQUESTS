@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -50,8 +51,11 @@ class RequestClientUseCaseTest {
 
     private RequestClient validRequest;
 
+    private String auth;
+
     @BeforeEach
     void setUp() {
+        auth = "toke jwt";
         validRequest = new RequestClient();
         validRequest.setRequestTypeId(1L);
         validRequest.setIdentityDocument("123456789");
@@ -69,7 +73,7 @@ class RequestClientUseCaseTest {
         when(requestTypeRepository.findById(1L)).thenReturn(Mono.just(stubRequestType));
         when(requestClientRepository.save(any(RequestClient.class))).thenReturn(Mono.just(validRequest));
 
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectNextMatches(req -> req.getEmail().equals("cliente@example.com") &&
                         req.getStatusId() == 1L)
                 .verifyComplete();
@@ -82,7 +86,7 @@ class RequestClientUseCaseTest {
     void saveRequest_whenRequestTypeIdNull_shouldReturnError() {
         validRequest.setRequestTypeId(null);
 
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El tipo de préstamo es obligatorio."))
                 .verify();
@@ -93,13 +97,13 @@ class RequestClientUseCaseTest {
     @Test
     void saveRequest_whenIdentityDocumentNullOrBlank_shouldReturnError() {
         validRequest.setIdentityDocument(null);
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El documento de identidad del cliente es obligatorio."))
                 .verify();
 
         validRequest.setIdentityDocument("");
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El documento de identidad del cliente es obligatorio."))
                 .verify();
@@ -110,13 +114,13 @@ class RequestClientUseCaseTest {
     @Test
     void saveRequest_whenEmailNullOrBlank_shouldReturnError() {
         validRequest.setEmail(null);
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El email es obligatorio."))
                 .verify();
 
         validRequest.setEmail("");
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El email es obligatorio."))
                 .verify();
@@ -128,7 +132,7 @@ class RequestClientUseCaseTest {
     void saveRequest_whenEmailInvalid_shouldReturnError() {
         validRequest.setEmail("correo-invalido");
 
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El email tiene un formato inválido."))
                 .verify();
@@ -139,13 +143,13 @@ class RequestClientUseCaseTest {
     @Test
     void saveRequest_whenAmountInvalid_shouldReturnError() {
         validRequest.setAmount(null);
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("Monto no válido, debe ser mayor a 0."))
                 .verify();
 
         validRequest.setAmount(0.0);
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("Monto no válido, debe ser mayor a 0."))
                 .verify();
@@ -156,13 +160,13 @@ class RequestClientUseCaseTest {
     @Test
     void saveRequest_whenDeadlineInvalid_shouldReturnError() {
         validRequest.setDeadline(null);
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El plazo debe ser mayor a 0."))
                 .verify();
 
         validRequest.setDeadline(0L);
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El plazo debe ser mayor a 0."))
                 .verify();
@@ -174,7 +178,7 @@ class RequestClientUseCaseTest {
     void saveRequest_whenIdentityDocumentInvalid_shouldReturnError() {
         validRequest.setIdentityDocument("ABC123");
 
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El documento de identidad solo debe contener números."))
                 .verify();
@@ -186,7 +190,7 @@ class RequestClientUseCaseTest {
     void saveRequest_whenRequestTypeDoesNotExist_shouldReturnError() {
         when(requestTypeRepository.findById(1L)).thenReturn(Mono.empty());
 
-        StepVerifier.create(requestClientUseCase.saveRequest(validRequest))
+        StepVerifier.create(requestClientUseCase.saveRequest(validRequest,auth))
                 .expectErrorMatches(err -> err instanceof IllegalArgumentException &&
                         err.getMessage().equals("El tipo de préstamo no existe."))
                 .verify();
@@ -387,6 +391,158 @@ class RequestClientUseCaseTest {
                 .expectErrorMessage("La solicitud ya se encuentra en el estado solicitado")
                 .verify();
     }
+
+    @Test
+    void saveRequest_whenAutomaticValidationTrue_shouldCallSendRequestForAutomaticValidation() {
+        // given
+        RequestClient requestClient = new RequestClient();
+        requestClient.setId(1L);
+        requestClient.setRequestTypeId(10L);
+        requestClient.setIdentityDocument("123456789");
+        requestClient.setEmail("test@example.com");
+        requestClient.setAmount(1000.0);
+        requestClient.setDeadline(12L);
+
+        RequestType requestType = new RequestType();
+        requestType.setId(10L);
+        requestType.setAutomaticValidation(true);
+        requestType.setInterestRate(0.18);
+
+        UserInfo userInfo = new UserInfo();
+        userInfo.setBaseSalary(3000000.0);
+
+        // mocks para que dispare el flujo completo
+        when(requestTypeRepository.findById(10L)).thenReturn(Mono.just(requestType));
+        when(requestClientRepository.save(any(RequestClient.class))).thenReturn(Mono.just(requestClient));
+        when(requestTypeRepository.findAll()).thenReturn(Flux.just(requestType));
+        when(requestClientRepository.findByEmailAndStatusId("test@example.com", 2L)).thenReturn(Flux.fromIterable(Collections.emptyList()));
+        when(userInfoRepository.selfSearch("Bearer token")).thenReturn(Mono.just(userInfo));
+        when(messageQueueRepository.sendMessageCalculateDebtCapacity(any())).thenReturn(Mono.empty());
+
+        // when
+        Mono<RequestClient> result = requestClientUseCase.saveRequest(requestClient, "Bearer token");
+
+        // then
+        StepVerifier.create(result)
+                .expectNextMatches(saved -> saved.getId().equals(1L))
+                .verifyComplete();
+
+        // verificamos que realmente se invocó el envío del mensaje
+        verify(messageQueueRepository, times(1)).sendMessageCalculateDebtCapacity(any());
+    }
+
+    @Test
+    void saveRequest_whenAutomaticValidationFalse_shouldNotCallSendRequestForAutomaticValidation() {
+        // given
+        RequestClient requestClient = new RequestClient();
+        requestClient.setId(2L);
+        requestClient.setRequestTypeId(20L);
+        requestClient.setIdentityDocument("987654321");
+        requestClient.setEmail("user@example.com");
+        requestClient.setAmount(5000.0);
+        requestClient.setDeadline(24L);
+
+        RequestType requestType = new RequestType();
+        requestType.setId(20L);
+        requestType.setAutomaticValidation(false);
+
+        // mocks
+        when(requestTypeRepository.findById(20L)).thenReturn(Mono.just(requestType));
+        when(requestClientRepository.save(any(RequestClient.class))).thenReturn(Mono.just(requestClient));
+
+        // when
+        Mono<RequestClient> result = requestClientUseCase.saveRequest(requestClient, "Bearer token");
+
+        // then
+        StepVerifier.create(result)
+                .expectNextMatches(saved -> saved.getId().equals(2L))
+                .verifyComplete();
+
+        // aseguramos que NO se mandó mensaje
+        verify(messageQueueRepository, never()).sendMessageCalculateDebtCapacity(any());
+    }
+
+    @Test
+    void updateStatusListener_Success() {
+        Long requestId = 1L;
+        Long statusId = 2L;
+
+        RequestClient client = new RequestClient();
+        client.setId(requestId);
+        client.setStatusId(1L);
+        client.setEmail("test@email.com");
+
+        RequestStatus status = new RequestStatus();
+        status.setId(statusId);
+        status.setName("Aprobada");
+
+        when(requestClientRepository.findById(requestId)).thenReturn(Mono.just(client));
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.just(status));
+        when(requestClientRepository.save(any(RequestClient.class))).thenReturn(Mono.just(client));
+
+        Mono<RequestClient> result = requestClientUseCase.updateStatusListener(requestId, statusId);
+
+        StepVerifier.create(result)
+                .expectNextMatches(savedClient -> savedClient.getStatusId().equals(statusId))
+                .verifyComplete();
+    }
+
+    @Test
+    void updateStatusListener_RequestNotFound() {
+        Long requestId = 1L;
+        Long statusId = 2L;
+
+        when(requestClientRepository.findById(requestId)).thenReturn(Mono.empty());
+
+        Mono<RequestClient> result = requestClientUseCase.updateStatusListener(requestId, statusId);
+
+        StepVerifier.create(result)
+                .expectErrorMessage("Solicitud con id " + requestId + " no encontrada")
+                .verify();
+    }
+
+    @Test
+    void updateStatusListener_StatusNotFound() {
+        Long requestId = 1L;
+        Long statusId = 2L;
+
+        RequestClient client = new RequestClient();
+        client.setId(requestId);
+        client.setStatusId(1L);
+
+        when(requestClientRepository.findById(requestId)).thenReturn(Mono.just(client));
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.empty());
+
+        Mono<RequestClient> result = requestClientUseCase.updateStatusListener(requestId, statusId);
+
+        StepVerifier.create(result)
+                .expectErrorMessage("Estado con id " + statusId + " no encontrado")
+                .verify();
+    }
+
+    @Test
+    void updateStatusListener_StatusAlreadyCurrent() {
+        Long requestId = 1L;
+        Long statusId = 1L;
+
+        RequestClient client = new RequestClient();
+        client.setId(requestId);
+        client.setStatusId(statusId);
+
+        RequestStatus status = new RequestStatus();
+        status.setId(statusId);
+        status.setName("Aprobada");
+
+        when(requestClientRepository.findById(requestId)).thenReturn(Mono.just(client));
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.just(status));
+
+        Mono<RequestClient> result = requestClientUseCase.updateStatusListener(requestId, statusId);
+
+        StepVerifier.create(result)
+                .expectErrorMessage("La solicitud ya se encuentra en el estado solicitado")
+                .verify();
+    }
+
 
 
 }
