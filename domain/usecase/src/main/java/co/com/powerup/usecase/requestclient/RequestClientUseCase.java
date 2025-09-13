@@ -15,6 +15,8 @@ import co.com.powerup.model.requesttype.gateways.RequestTypeRepository;
 import co.com.powerup.model.userinfo.UserInfo;
 import co.com.powerup.model.userinfo.gateways.UserInfoRepository;
 import co.com.powerup.usecase.requestclient.dto.ResponseDataRequest;
+import co.com.powerup.usecase.requestclient.dto.ResponseDataTotal;
+import co.com.powerup.usecase.requestclient.enums.TypeTotal;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -210,5 +212,35 @@ public class RequestClientUseCase implements IRequestClientUseCase {
                             return requestClientRepository.save(requestClient);
                         }));
     }
+
+    @Override
+    public Mono<ResponseDataTotal> totalByStatus(TypeTotal type, Long statusId) {
+        return requestStatusRepository.findById(statusId)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("El estado de préstamo no existe.")))
+                .flatMap(status -> {
+                    switch (type) {
+                        case APPROVED_REQUESTS:
+                            return requestClientRepository.countByStatusId(statusId)
+                                    .map(count -> ResponseDataTotal.builder()
+                                            .status(status.getName())
+                                            .type(type.name())
+                                            .value(count != null ? count.doubleValue() : 0.0)
+                                            .build());
+
+                        case APPROVED_AMOUNT:
+                            return requestClientRepository.sumAmountByStatusId(statusId)
+                                    .map(sum -> ResponseDataTotal.builder()
+                                            .status(status.getName())
+                                            .type(type.name())
+                                            .value(sum != null ? sum.doubleValue() : 0.0)
+                                            .build());
+
+                        default:
+                            return Mono.error(new IllegalArgumentException(
+                                    "Tipo de total no soportado: " + type));
+                    }
+                });
+    }
+
 
 }

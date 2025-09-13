@@ -13,5 +13,7 @@ public interface RequestClientRepository {
     Flux<RequestClient> findByStatusIds(List<Long> statusIds, int offset, int size);
     Mono<RequestClient> findById(Long id); 
     Flux<RequestClient> findByEmailAndStatusId(String email, Long statusId);
+    Mono<Long> countByStatusId(Long statusId);
+    Mono<Double> sumAmountByStatusId(Long statusId);
     
 }

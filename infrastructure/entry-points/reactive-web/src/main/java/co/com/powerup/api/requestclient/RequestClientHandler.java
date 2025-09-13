@@ -17,6 +17,7 @@ import co.com.powerup.api.dtos.request.RequestClientCreateDTO;
 import co.com.powerup.api.exceptions.ForbiddenException;
 import co.com.powerup.api.mapper.RequestClientDTOMapper;
 import co.com.powerup.usecase.requestclient.IRequestClientUseCase;
+import co.com.powerup.usecase.requestclient.enums.TypeTotal;
 import io.jsonwebtoken.Claims;
 import reactor.core.publisher.Mono;
 
@@ -54,7 +55,7 @@ public class RequestClientHandler {
                         return Mono.error(
                                 new ForbiddenException("El email de la solicitud no coincide con el del solicitante"));
                     }
-                    return requestClientUseCase.saveRequest(user,token);
+                    return requestClientUseCase.saveRequest(user, token);
                 })
                 .map(requestClientDTOMapper::toResponse)
                 .flatMap(requestClient -> ServerResponse.ok()
@@ -89,6 +90,20 @@ public class RequestClientHandler {
                 .flatMap(updated -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(updated));
+    }
+
+    public Mono<ServerResponse> getTotal(ServerRequest serverRequest) {
+        log.info("➡️ Entró al handler getTotal() de RequestClientHandler");
+        TypeTotal type = serverRequest.queryParam("type")
+                .map(TypeTotal::valueOf)
+                .orElseThrow(() -> new IllegalArgumentException("El parámetro 'type' es requerido"));
+        Long statusId = serverRequest.queryParam("statusId")
+                .map(Long::parseLong)
+                .orElseThrow(() -> new IllegalArgumentException("El parámetro 'statusId' es requerido"));
+        return requestClientUseCase.totalByStatus(type, statusId)
+                .flatMap(total -> ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(total));
     }
 
 }

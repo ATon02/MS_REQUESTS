@@ -10,6 +10,8 @@ import co.com.powerup.model.requesttype.gateways.RequestTypeRepository;
 import co.com.powerup.model.userinfo.UserInfo;
 import co.com.powerup.model.userinfo.gateways.UserInfoRepository;
 import co.com.powerup.usecase.requestclient.dto.ResponseDataRequest;
+import co.com.powerup.usecase.requestclient.dto.ResponseDataTotal;
+import co.com.powerup.usecase.requestclient.enums.TypeTotal;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -394,7 +396,6 @@ class RequestClientUseCaseTest {
 
     @Test
     void saveRequest_whenAutomaticValidationTrue_shouldCallSendRequestForAutomaticValidation() {
-        // given
         RequestClient requestClient = new RequestClient();
         requestClient.setId(1L);
         requestClient.setRequestTypeId(10L);
@@ -411,7 +412,6 @@ class RequestClientUseCaseTest {
         UserInfo userInfo = new UserInfo();
         userInfo.setBaseSalary(3000000.0);
 
-        // mocks para que dispare el flujo completo
         when(requestTypeRepository.findById(10L)).thenReturn(Mono.just(requestType));
         when(requestClientRepository.save(any(RequestClient.class))).thenReturn(Mono.just(requestClient));
         when(requestTypeRepository.findAll()).thenReturn(Flux.just(requestType));
@@ -419,21 +419,17 @@ class RequestClientUseCaseTest {
         when(userInfoRepository.selfSearch("Bearer token")).thenReturn(Mono.just(userInfo));
         when(messageQueueRepository.sendMessageCalculateDebtCapacity(any())).thenReturn(Mono.empty());
 
-        // when
         Mono<RequestClient> result = requestClientUseCase.saveRequest(requestClient, "Bearer token");
 
-        // then
         StepVerifier.create(result)
                 .expectNextMatches(saved -> saved.getId().equals(1L))
                 .verifyComplete();
 
-        // verificamos que realmente se invocó el envío del mensaje
         verify(messageQueueRepository, times(1)).sendMessageCalculateDebtCapacity(any());
     }
 
     @Test
     void saveRequest_whenAutomaticValidationFalse_shouldNotCallSendRequestForAutomaticValidation() {
-        // given
         RequestClient requestClient = new RequestClient();
         requestClient.setId(2L);
         requestClient.setRequestTypeId(20L);
@@ -446,19 +442,15 @@ class RequestClientUseCaseTest {
         requestType.setId(20L);
         requestType.setAutomaticValidation(false);
 
-        // mocks
         when(requestTypeRepository.findById(20L)).thenReturn(Mono.just(requestType));
         when(requestClientRepository.save(any(RequestClient.class))).thenReturn(Mono.just(requestClient));
 
-        // when
         Mono<RequestClient> result = requestClientUseCase.saveRequest(requestClient, "Bearer token");
 
-        // then
         StepVerifier.create(result)
                 .expectNextMatches(saved -> saved.getId().equals(2L))
                 .verifyComplete();
 
-        // aseguramos que NO se mandó mensaje
         verify(messageQueueRepository, never()).sendMessageCalculateDebtCapacity(any());
     }
 
@@ -543,6 +535,64 @@ class RequestClientUseCaseTest {
                 .verify();
     }
 
+    @Test
+    void totalByStatus_shouldReturnApprovedRequests() { 
+        Long statusId = 1L;
+        RequestStatus status = new RequestStatus();
+        status.setId(statusId);
+        status.setName("aprobada");
+
+        when(requestStatusRepository.findById(statusId))
+                .thenReturn(Mono.just(status));
+        when(requestClientRepository.countByStatusId(statusId))
+                .thenReturn(Mono.just(5L));
+
+        Mono<ResponseDataTotal> result = requestClientUseCase.totalByStatus(TypeTotal.APPROVED_REQUESTS, statusId);
+
+        StepVerifier.create(result)
+                .expectNextMatches(r -> 
+                        r.getStatus().equals("aprobada") &&
+                        r.getType().equals(TypeTotal.APPROVED_REQUESTS.name()) &&
+                        r.getValue().equals(5.0)
+                )
+                .verifyComplete();
+    }
+
+    @Test
+    void totalByStatus_shouldReturnApprovedAmount() {
+        Long statusId = 2L;
+        RequestStatus status = new RequestStatus();
+        status.setId(statusId);
+        status.setName("aprobada");
+
+        when(requestStatusRepository.findById(statusId))
+                .thenReturn(Mono.just(status));
+        when(requestClientRepository.sumAmountByStatusId(statusId))
+                .thenReturn(Mono.just(1500.75));
+
+        Mono<ResponseDataTotal> result = requestClientUseCase.totalByStatus(TypeTotal.APPROVED_AMOUNT, statusId);
+
+        StepVerifier.create(result)
+                .expectNextMatches(r -> 
+                        r.getStatus().equals("aprobada") &&
+                        r.getType().equals(TypeTotal.APPROVED_AMOUNT.name()) &&
+                        r.getValue().equals(1500.75)
+                )
+                .verifyComplete();
+    }
+
+    @Test
+    void totalByStatus_shouldReturnErrorWhenStatusNotFound() {
+        Long statusId = 99L;
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.empty());
+
+        Mono<ResponseDataTotal> result = requestClientUseCase.totalByStatus(TypeTotal.APPROVED_AMOUNT, statusId);
+
+        StepVerifier.create(result)
+                .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
+                                         e.getMessage().equals("El estado de préstamo no existe."))
+                .verify();
+    }
 
 
 }

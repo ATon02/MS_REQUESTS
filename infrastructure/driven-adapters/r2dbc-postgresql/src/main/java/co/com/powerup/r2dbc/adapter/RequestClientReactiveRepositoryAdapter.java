@@ -6,6 +6,7 @@ import co.com.powerup.r2dbc.entity.RequestClientEntity;
 import co.com.powerup.r2dbc.helper.ReactiveAdapterOperations;
 import co.com.powerup.r2dbc.repository.RequestClientReactiveRepository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -38,6 +39,18 @@ public class RequestClientReactiveRepositoryAdapter extends ReactiveAdapterOpera
     public Flux<RequestClient> findByEmailAndStatusId(String email, Long statusId) {
         return repository.findByEmailAndStatusId(email, statusId)
             .map(entity -> mapper.map(entity, RequestClient.class)); 
+    }
+
+    @Override
+    public Mono<Long> countByStatusId(Long statusId) {
+        return repository.countByStatusId(statusId)
+            .map(entity -> mapper.map(entity, Long.class)); 
+    }
+
+    @Override
+    public Mono<Double> sumAmountByStatusId(Long statusId) {
+       return repository.sumAmountByStatusId(statusId)
+            .map(entity -> mapper.map(entity, Double.class)); 
     }
 
 }

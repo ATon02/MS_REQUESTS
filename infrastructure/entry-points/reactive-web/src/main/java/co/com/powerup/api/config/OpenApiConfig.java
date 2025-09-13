@@ -33,6 +33,7 @@ import co.com.powerup.api.dtos.response.RequestClientResponse;
 import co.com.powerup.api.dtos.response.RequestStatusResponse;
 import co.com.powerup.api.dtos.response.RequestTypeResponse;
 import co.com.powerup.usecase.requestclient.dto.ResponseDataRequest;
+import co.com.powerup.usecase.requestclient.dto.ResponseDataTotal;
 
 @Configuration
 public class OpenApiConfig {
@@ -191,6 +192,33 @@ public class OpenApiConfig {
                                                                             new Schema<>().$ref(
                                                                                     "#/components/schemas/RequestClientResponse"))))))));
             openApi.path("/api/v1/request/all", requestClientPathAll);
+            PathItem requestTotal = new PathItem()
+                    .get(new Operation()
+                            .operationId("totalRequestsByStatus")
+                            .tags(List.of("RequestClient"))
+                            .summary("Obtiene el totalizado de solicitudes en un estado ya sea en cantidad o monto")
+                            .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                            .addParametersItem(new QueryParameter()
+                                    .name("type")
+                                    .description("Tipo de total a calcular (APPROVED_REQUESTS o APPROVED_AMOUNT)")
+                                    .required(true)
+                                    .schema(new StringSchema()
+                                        ._enum(List.of("APPROVED_REQUESTS", "APPROVED_AMOUNT"))))
+                            .addParametersItem(new QueryParameter()
+                                    .name("statusId")
+                                    .description("ID del estado a buscar")
+                                    .required(true)
+                                    .schema(new IntegerSchema()))
+                            .responses(new ApiResponses()
+                                    .addApiResponse("200", new ApiResponse()
+                                            .description("Totales de solicitudes de clientes")
+                                            .content(new Content()
+                                                    .addMediaType("application/json",
+                                                            new io.swagger.v3.oas.models.media.MediaType()
+                                                                    .schema(new ArraySchema().items(
+                                                                            new Schema<>().$ref(
+                                                                                    "#/components/schemas/ResponseDataTotal"))))))));
+            openApi.path("/api/v1/request/total", requestTotal);
             // REQUEST STATUS
             PathItem requestStatusPath = new PathItem()
                     .get(new Operation()
@@ -280,7 +308,11 @@ public class OpenApiConfig {
                             .addProperty("requestStatus", new StringSchema())
                             .addProperty("baseSalary", new NumberSchema().format("double"))
                             .addProperty("totalMonthlyDebt", new NumberSchema().format("double"))
-                            .addProperty("interestRate", new NumberSchema().format("double")));
+                            .addProperty("interestRate", new NumberSchema().format("double")))
+                    .addSchemas("ResponseDataTotal", new Schema<ResponseDataTotal>()
+                            .addProperty("status", new StringSchema())
+                            .addProperty("type", new StringSchema())
+                            .addProperty("value", new NumberSchema().format("double")));
         };
     }
 
