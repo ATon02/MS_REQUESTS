@@ -243,4 +243,29 @@ public class RequestClientUseCase implements IRequestClientUseCase {
     }
 
 
+    @Override
+    public Mono<List<ResponseDataTotal>> totalsByStatus(Long statusId) {
+        return requestStatusRepository.findById(statusId)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("El estado de préstamo no existe.")))
+                .flatMap(status -> {
+                    Mono<ResponseDataTotal> approvedRequests = requestClientRepository.countByStatusId(statusId)
+                            .map(count -> ResponseDataTotal.builder()
+                                    .status(status.getName())
+                                    .type(TypeTotal.APPROVED_REQUESTS.name())
+                                    .value(count != null ? count.doubleValue() : 0.0)
+                                    .build());
+
+                    Mono<ResponseDataTotal> approvedAmount = requestClientRepository.sumAmountByStatusId(statusId)
+                            .map(sum -> ResponseDataTotal.builder()
+                                    .status(status.getName())
+                                    .type(TypeTotal.APPROVED_AMOUNT.name())
+                                    .value(sum != null ? sum.doubleValue() : 0.0)
+                                    .build());
+
+                    return Mono.zip(approvedRequests, approvedAmount)
+                            .map(tuple -> List.of(tuple.getT1(), tuple.getT2()));
+                });
+    }
+
+
 }

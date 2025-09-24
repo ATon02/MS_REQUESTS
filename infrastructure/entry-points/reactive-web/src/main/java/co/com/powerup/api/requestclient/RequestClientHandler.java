@@ -19,6 +19,7 @@ import co.com.powerup.api.mapper.RequestClientDTOMapper;
 import co.com.powerup.usecase.requestclient.IRequestClientUseCase;
 import co.com.powerup.usecase.requestclient.enums.TypeTotal;
 import io.jsonwebtoken.Claims;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -104,6 +105,19 @@ public class RequestClientHandler {
                 .flatMap(total -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(total));
+    }
+
+    public Mono<ServerResponse> getTotalInternal(ServerRequest serverRequest) {
+        log.info("➡️ Entró al handler getTotalInternal() de RequestClientHandler");
+        Long statusId = serverRequest.queryParam("statusId")
+                .map(Long::parseLong)
+                .orElseThrow(() -> new IllegalArgumentException("El parámetro 'statusId' es requerido"));
+        return requestClientUseCase.totalsByStatus(statusId)
+                .flatMapMany(Flux::fromIterable) 
+                .collectList()
+                .flatMap(reports -> ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(reports));
     }
 
 }

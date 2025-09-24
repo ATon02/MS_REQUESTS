@@ -25,6 +25,8 @@ public class JwtAuthenticationFilter implements WebFilter {
 
     @Value("${SPRING_SECRET_KEY}")
     private String secretKey;
+    @Value("${SPRING_INTERNAL_JOB_TOKEN}")
+    private String jobToken;
 
     @SuppressWarnings({ "null", "deprecation" })
     @Override
@@ -33,6 +35,16 @@ public class JwtAuthenticationFilter implements WebFilter {
         if (path.startsWith("/webjars/swagger-ui") || path.startsWith("/v3/api-docs")
                 || path.startsWith("/swagger-ui.html") || path.startsWith("/actuator")) {
             return chain.filter(exchange);
+        }
+        if (path.startsWith("/api/v1/request/totals/internal")) {
+            String token = exchange.getRequest().getHeaders().getFirst("X-Job-Token");
+
+            if (jobToken.equals(token)) {
+                return chain.filter(exchange);
+            } else {
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return Mono.error(new UnauthorizedException("Token de authorizacion invalido"));
+            }
         }
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -60,7 +72,7 @@ public class JwtAuthenticationFilter implements WebFilter {
             return Mono.just(false);
         }
         String userRole = claims.get("role", String.class);
-        System.out.println("User role from token: " + userRole); // Debugging line
+        System.out.println("User role from token: " + userRole);
         return Mono.just(userRole != null && allowedRoles.contains(userRole));
     }
 

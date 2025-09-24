@@ -17,5 +17,6 @@ public interface IRequestClientUseCase {
     Mono<RequestClient> updateStatus(Long requestId, Long statusId);
     Mono<RequestClient> updateStatusListener(Long requestId, Long statusId);
     Mono<ResponseDataTotal> totalByStatus(TypeTotal type, Long statusId);
+    Mono<List<ResponseDataTotal>> totalsByStatus(Long statusId);
 
 }

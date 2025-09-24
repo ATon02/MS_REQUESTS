@@ -29,7 +29,8 @@ public class RequestClientRouter {
                 .filter(filter.requireRole(List.of("asesor")));
         RouterFunction<ServerResponse> totalByStatus = route(GET("/api/v1/request/total"), handler::getTotal)
                 .filter(filter.requireRole(List.of("admin")));
-        return find.and(save).and(findFilter).and(updateStatus).and(totalByStatus);
+        RouterFunction<ServerResponse> totalByStatusInternal = route(GET("/api/v1/request/totals/internal"), handler::getTotalInternal);
+        return find.and(save).and(findFilter).and(updateStatus).and(totalByStatus).and(totalByStatusInternal);
     }
 }
 

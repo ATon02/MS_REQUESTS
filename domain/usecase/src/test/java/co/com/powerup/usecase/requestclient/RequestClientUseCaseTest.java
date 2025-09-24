@@ -594,5 +594,42 @@ class RequestClientUseCaseTest {
                 .verify();
     }
 
+    @Test
+    void totalsByStatus_shouldReturnBothTotals() {
+        Long statusId = 1L;
+        RequestStatus status = new RequestStatus();
+        status.setId(statusId);
+        status.setName("Aprobada");
+
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.just(status));
+        when(requestClientRepository.countByStatusId(statusId)).thenReturn(Mono.just(5L));
+        when(requestClientRepository.sumAmountByStatusId(statusId)).thenReturn(Mono.just(10000.0));
+
+        Mono<List<ResponseDataTotal>> result = requestClientUseCase.totalsByStatus(statusId);
+
+        StepVerifier.create(result)
+                .expectNextMatches(list ->
+                        list.size() == 2 &&
+                        list.get(0).getType().equals(TypeTotal.APPROVED_REQUESTS.name()) &&
+                        list.get(0).getValue() == 5.0 &&
+                        list.get(1).getType().equals(TypeTotal.APPROVED_AMOUNT.name()) &&
+                        list.get(1).getValue() == 10000.0
+                )
+                .verifyComplete();
+    }
+
+    @Test
+    void totalsByStatus_shouldReturnErrorWhenStatusNotFound() {
+        Long statusId = 99L;
+        when(requestStatusRepository.findById(statusId)).thenReturn(Mono.empty());
+
+        Mono<List<ResponseDataTotal>> result = requestClientUseCase.totalsByStatus(statusId);
+
+        StepVerifier.create(result)
+                .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
+                        e.getMessage().equals("El estado de préstamo no existe."))
+                .verify();
+    }
+
 
 }
